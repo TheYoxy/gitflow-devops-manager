@@ -7,7 +7,7 @@
     "compile": "tsc -p .",
     "watch": "tsc -p . -w",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "run": "npm run compile && node out/main.js"
+    "run": "npm run compile && node dist/main.js"
   },
   "keywords": [
     "git",
@@ -16,22 +16,19 @@
   "author": "TheYoxy",
   "license": "MIT",
   "devDependencies": {
-    "@types/core-js": "^2.5.2",
-    "@types/node": "^12.6.8",
-    "@types/rx": "^4.1.1",
-    "@types/yargs": "^13.0.0",
-    "gts": "^1.0.0",
     "typescript": "^3.5.3"
   },
   "dependencies": {
+    "@types/core-js": "^2.5.2",
+    "@types/node": "^12.6.8",
+    "@types/yargs": "^13.0.0",
     "chalk": "^2.4.2",
     "core-js": "^3.1.4",
     "enquirer": "^2.3.1",
     "ora": "^3.4.0",
-    "rx": "^4.1.0",
     "yargs": "^13.3.0"
   },
   "bin": {
-    "main": "out/main.js"
+    "main": "dist/main.js"
   }
 }

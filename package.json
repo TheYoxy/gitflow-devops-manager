@@ -1,10 +1,19 @@
 {
   "name": "gitflow-devops-manager",
   "version": "0.0.1",
-  "description": "",
+  "description": "Tool ",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "check": "gts check",
+    "clean": "gts clean",
+    "compile": "tsc -p .",
+    "watch": "tsc -p . -w",
+    "fix": "gts fix",
+    "prepare": "npm run compile",
+    "pretest": "npm run compile",
+    "posttest": "npm run check",
+    "run": "npm run compile && node out/main.js"
   },
   "keywords": [
     "git",
@@ -13,10 +22,22 @@
   "author": "TheYoxy",
   "license": "MIT",
   "devDependencies": {
+    "@types/core-js": "^2.5.2",
+    "@types/node": "^12.6.8",
+    "@types/rx": "^4.1.1",
+    "@types/yargs": "^13.0.0",
+    "gts": "^1.0.0",
     "typescript": "^3.5.3"
   },
   "dependencies": {
     "chalk": "^2.4.2",
+    "core-js": "^3.1.4",
+    "enquirer": "^2.3.1",
+    "ora": "^3.4.0",
+    "rx": "^4.1.0",
     "yargs": "^13.3.0"
+  },
+  "bin": {
+    "main": "out/main.js"
   }
 }

@@ -14,9 +14,14 @@
     "types": [
       "node",
       "core-js",
-      "yargs"
+      "yargs",
+      "nodegit"
     ],
+    "sourceMap": true,
+    "removeComments": true,
+    "declarationMap": true,
     "esModuleInterop": true,
     "resolveJsonModule": true
-  }
+  },
+  "compileOnSave": true
 }

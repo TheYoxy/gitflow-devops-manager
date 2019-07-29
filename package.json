@@ -7,16 +7,13 @@
     "compile": "tsc -p .",
     "watch": "tsc -p . -w",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "run": "npm run compile && node dist/main.js"
+    "run": "node dist/main.js",
+    "release": "gdm release b Release 'C:/Behome'"
   },
   "keywords": [
     "git",
     "git-flow"
   ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/TheYoxy/gitflow-devops-manager.git"
-  },
   "author": "TheYoxy",
   "license": "MIT",
   "devDependencies": {
@@ -25,14 +22,16 @@
   "dependencies": {
     "@types/core-js": "^2.5.2",
     "@types/node": "^12.6.8",
+    "@types/nodegit": "^0.24.8",
     "@types/yargs": "^13.0.0",
     "chalk": "^2.4.2",
     "core-js": "^3.1.4",
     "enquirer": "^2.3.1",
+    "nodegit": "^0.25.0-alpha.16",
     "ora": "^3.4.0",
     "yargs": "^13.3.0"
   },
   "bin": {
-    "main": "dist/main.js"
+    "gdm": "dist/main.js"
   }
 }

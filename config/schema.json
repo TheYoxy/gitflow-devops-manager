@@ -1,0 +1,54 @@
+{
+  "definitions": {},
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://example.com/root.json",
+  "type": "object",
+  "title": "GDM Schema",
+  "required": [
+    "$schema",
+    "GitCredentials"
+  ],
+  "properties": {
+    "$schema": {
+      "$id": "#/properties/$schema",
+      "type": "string",
+      "title": "The $schema Schema",
+      "default": "",
+      "examples": [
+        ""
+      ],
+      "pattern": "^(.*)$"
+    },
+    "GitCredentials": {
+      "$id": "#/properties/GitCredentials",
+      "type": "object",
+      "title": "The Gitcredentials Schema",
+      "required": [
+        "Username",
+        "Token"
+      ],
+      "properties": {
+        "Username": {
+          "$id": "#/properties/GitCredentials/properties/Username",
+          "type": "string",
+          "title": "The Username Schema",
+          "default": "",
+          "examples": [
+            ""
+          ],
+          "pattern": "^(.*)$"
+        },
+        "Token": {
+          "$id": "#/properties/GitCredentials/properties/Token",
+          "type": "string",
+          "title": "The Token Schema",
+          "default": "",
+          "examples": [
+            ""
+          ],
+          "pattern": "^(.*)$"
+        }
+      }
+    }
+  }
+}

@@ -3,46 +3,100 @@
 import Git, {FetchOptions, Reference} from 'nodegit';
 import yargs from "yargs";
 import './polyfills';
+import winston, {format} from "winston";
+import Listr from "listr";
+import config from "config";
 
-const pp = require('path');
+const {combine, timestamp, label, printf, colorize} = format;
+
+const logging = winston.createLogger({
+    transports: [
+        new winston.transports.Console({
+            level: 'info',
+            format: combine(
+                colorize(),
+                printf(({message}) => {
+                    return `${message}`;
+                })
+            )
+        }),
+        new winston.transports.File({
+            filename: 'out.log',
+            level: 'debug',
+            format: combine(
+                label({label: 'This is a label'}),
+                timestamp(),
+                printf(({level, message, label, timestamp}) => {
+                    return `${timestamp} [${label}] ${level}: ${message}`;
+                })
+            ),
+        }),
+    ]
+});
+
 // @ts-ignore
-let argv = yargs.command('release <base> <target>', 'Create a new release', argv => {
+// tslint:disable-next-line: no-unused-expression
+yargs.command('release <base> <target>', 'Create a new release', argv => {
     argv.positional('base', {
         describe: 'Base branch used to create a release',
-        require: true
+        require: true,
     }).positional('target', {
-        describe: 'Target brache used to create a release',
-        require: true
+        describe: 'Target branch used to create a release',
+        require: true,
+    }).option('remote', {
+        alias: 'r',
+        describe: 'Remote repository to use',
+        default: 'origin',
     });
-}, async args => {
-    const remoteOption: FetchOptions = {
+}, async (args: { remote: string; path: string; base: string; target: string; }) => {
+    const fetchOptions: FetchOptions = {
         callbacks: {
-            credentials: function () {
-                return Git.Cred.userpassPlaintextNew('', '');
-            }
+            credentials() {
+                return Git.Cred.userpassPlaintextNew(config.get('GitCredentials.Username')
+                    , config.get('GitCredentials.Token'));
+            },
         }
     };
-
+    const remote = args.remote as string;
     const path = args.path as string;
-    console.log('Path: ', path);
-    const repo = await Git.Repository.open(path);
-    await repo.fetch('origin', remoteOption);
 
-    async function extracted(branchName: string): Promise<Reference | null> {
-        try {
-            const baseBranch = await repo.getBranch(branchName);
-            console.log(baseBranch);
-            console.log(baseBranch.isRemote());
-            return baseBranch;
-        } catch (e) {
-            console.error(e);
-            return null;
-        }
+    const repo = await Git.Repository.open(path);
+    await new Listr([{
+        title: 'git',
+        task: () =>
+            new Listr([{
+                title: 'Fetching repository',
+                task: () => fetch(),
+            }, {
+                title: 'Extracting branches',
+                task: async (ctx) => {
+                    await extracted(args.base as string).then(r => ctx.baseBranch = r);
+                    await extracted(args.target as string).then(r => ctx.targetBranch = r);
+                }
+            }])
+    }]).run();
+    async function fetch(): Promise<void> {
+        logging.debug(`Fetching repository at path [${path}]`);
+        await repo.fetch(remote, fetchOptions);
+        logging.info('Repository fetched');
     }
 
-    await extracted(args.base as string);
-    await extracted(args.target as string);
-    await extracted('MLdjsqlkjfmlksdqjm');
+    async function extracted(branchName: string): Promise<Reference | null> {
+        logging.debug(`Extracting ${branchName}`);
+        try {
+            const branch = await repo.getBranch(branchName);
+            logging.info(`Extraced ${branch}`);
+            return branch;
+        } catch (e) {
+            // Doesn't exist locally
+            if (!branchName.includes(remote)) {
+                return await extracted(`${remote}/${branchName}`);
+            } else {
+                logging.error(`Couldn't find branch ${branchName.replace(branchName, branchName.replace(`${remote}/`, ''))}`);
+                return null;
+            }
+        }
+    }
 }).demandCommand()
     .option('path', {
         alias: 'p',
@@ -50,7 +104,7 @@ let argv = yargs.command('release <base> <target>', 'Create a new release', argv
         default: __dirname,
         string: true,
         global: true,
-        normalize: true
+        normalize: true,
     })
     .help('h')
     .alias('h', 'help')

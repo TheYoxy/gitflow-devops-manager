@@ -8,7 +8,7 @@
     "watch": "tsc -p . -w",
     "test": "echo \"Error: no test specified\" && exit 1",
     "run": "node dist/main.js",
-    "release": "gdm release b Release -p 'C:/Behome'",
+    "release": "gdm release b Release -p C:\\Behome",
     "release:osx": "tsc -p . && gdm release b Release -p ~/Dev/Behome"
   },
   "keywords": [
@@ -20,6 +20,7 @@
   "devDependencies": {
     "@types/config": "0.0.34",
     "@types/listr": "^0.14.2",
+    "@types/shelljs": "^0.8.5",
     "@types/signale": "^1.2.1",
     "typescript": "^3.5.3"
   },
@@ -35,6 +36,7 @@
     "listr": "^0.14.3",
     "nodegit": "^0.25.0-alpha.16",
     "ora": "^3.4.0",
+    "shelljs": "^0.8.3",
     "winston": "^3.2.1",
     "yargs": "^13.3.0"
   },

@@ -3,10 +3,10 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "http://example.com/root.json",
   "type": "object",
-  "title": "GDM Schema",
+  "title": "The Root Schema",
   "required": [
     "$schema",
-    "GitCredentials"
+    "Credentials"
   ],
   "properties": {
     "$schema": {
@@ -15,21 +15,21 @@
       "title": "The $schema Schema",
       "default": "",
       "examples": [
-        ""
+        "./schema.json"
       ],
       "pattern": "^(.*)$"
     },
-    "GitCredentials": {
-      "$id": "#/properties/GitCredentials",
+    "Credentials": {
+      "$id": "#/properties/Credentials",
       "type": "object",
-      "title": "The Gitcredentials Schema",
+      "title": "The Credentials Schema",
       "required": [
         "Username",
         "Token"
       ],
       "properties": {
         "Username": {
-          "$id": "#/properties/GitCredentials/properties/Username",
+          "$id": "#/properties/Credentials/properties/Username",
           "type": "string",
           "title": "The Username Schema",
           "default": "",
@@ -39,12 +39,12 @@
           "pattern": "^(.*)$"
         },
         "Token": {
-          "$id": "#/properties/GitCredentials/properties/Token",
+          "$id": "#/properties/Credentials/properties/Token",
           "type": "string",
           "title": "The Token Schema",
           "default": "",
           "examples": [
-            ""
+            "lmkfqjmksldjqmfkjsdmlqjfmlsdkqjmlkfj"
           ],
           "pattern": "^(.*)$"
         }

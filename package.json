@@ -22,13 +22,16 @@
     "@types/listr": "^0.14.2",
     "@types/shelljs": "^0.8.5",
     "@types/signale": "^1.2.1",
-    "typescript": "^3.5.3"
+    "typescript": "^3.5.3",
+    "tslint": "^5.18.0"
   },
   "dependencies": {
     "@types/core-js": "^2.5.2",
     "@types/node": "^12.6.8",
     "@types/nodegit": "^0.24.8",
     "@types/yargs": "^13.0.0",
+    "axios": "^0.19.0",
+    "azure-devops-node-api": "^9.0.1",
     "chalk": "^2.4.2",
     "config": "^3.2.2",
     "core-js": "^3.1.4",

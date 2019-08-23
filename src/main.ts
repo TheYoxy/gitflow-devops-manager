@@ -3,7 +3,7 @@
 import {getPersonalAccessTokenHandler, WebApi} from 'azure-devops-node-api';
 import {Identity} from 'azure-devops-node-api/interfaces/IdentitiesInterfaces';
 import {ConnectionData} from 'azure-devops-node-api/interfaces/LocationsInterfaces';
-import {WorkItem, WorkItemErrorPolicy} from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces';
+import {WorkItem, WorkItemErrorPolicy, WorkItemType} from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces';
 import {IWorkItemTrackingApi} from 'azure-devops-node-api/WorkItemTrackingApi';
 import chalk from 'chalk';
 import config from 'config';
@@ -78,6 +78,9 @@ yargs.command('release <base> <target>', 'Create a new release', argv => {
   const username = config.get('Credentials.Username') as string;
   const password = config.get('Credentials.Token') as string;
 
+  const organization = 'AGBehome';
+  const project = 'Behome';
+
   const remote = args.remote as string;
   const path = args.path as string;
 
@@ -89,7 +92,7 @@ yargs.command('release <base> <target>', 'Create a new release', argv => {
     logging.debug('Ope');
   }
 
-  const api: WebApi = new WebApi('https://dev.azure.com/AGBehome', getPersonalAccessTokenHandler(password));
+  const api: WebApi = new WebApi(`https://dev.azure.com/${organization}`, getPersonalAccessTokenHandler(password));
 
   logging.debug('Connecting to devops');
   const connectionData: ConnectionData = await api.connect();
@@ -103,6 +106,7 @@ yargs.command('release <base> <target>', 'Create a new release', argv => {
 
   const workItemTracingApi: IWorkItemTrackingApi = await api.getWorkItemTrackingApi();
   logging.debug('Starting command');
+
   await new Listr([{
     title: 'git',
     task: () =>
@@ -193,7 +197,7 @@ yargs.command('release <base> <target>', 'Create a new release', argv => {
           for (let i = 0; i < n; i++) {
             const arr: WorkItem[] = await workItemTracingApi.getWorkItems(ids.slice(i * 200, (i + 1) * 200), undefined,
                                                                           undefined, undefined,
-                                                                          WorkItemErrorPolicy.Omit, 'Behome');
+                                                                          WorkItemErrorPolicy.Omit, project);
             logging.debug(`[${i + 1}/${n}] loaded ${arr.length} items`);
             wi = [...wi, ...arr];
           }
@@ -202,8 +206,42 @@ yargs.command('release <base> <target>', 'Create a new release', argv => {
           logging.info(`Loaded ${wi.length} work items`);
           ctx.workItems = wi;
         },
+      }, {
+        title: 'Create message',
+        task: async (ctx: Context) => {
+          await createMessage(ctx.workItems);
+        },
       }]),
   }]).run();
+
+  async function createMessage(workItems: WorkItem[]) {
+    const types: WorkItemType[] = await workItemTracingApi.getWorkItemTypes(project);
+
+    const d: { [id: string]: WorkItem[]; } = {};
+
+    types.map(value => value.name)
+      .forEach(
+        (value: string | undefined) => {
+          if (value) {
+            d[value] = workItems.filter(
+              (wi: WorkItem) => {
+                if (wi && wi.fields) {
+                  // tslint:disable-next-line:no-any
+                  const fields: { [p: string]: any } = wi.fields;
+                  return fields['System.WorkItemType'] === value;
+                } else {
+                  return false;
+                }
+              });
+
+            if (d[value].length === 0) {
+              delete d[value];
+            }
+          }
+        });
+
+    Object.getOwnPropertyNames(d).forEach(value => logging.info(value, d[value].length));
+  }
 
   async function extracted(branchName: string): Promise<Reference | null> {
     logging.debug(`Extracting ${branchName}`);

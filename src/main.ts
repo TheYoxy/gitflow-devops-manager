@@ -214,9 +214,8 @@ yargs.command('release <base> <target>', 'Create a new release', argv => {
       }]),
   }]).run();
 
-  async function createMessage(workItems: WorkItem[]) {
+  async function createMessage(workItems: WorkItem[]): Promise<string> {
     const types: WorkItemType[] = await workItemTracingApi.getWorkItemTypes(project);
-
     const d: { [id: string]: WorkItem[]; } = {};
 
     types.map(value => value.name)
@@ -240,7 +239,32 @@ yargs.command('release <base> <target>', 'Create a new release', argv => {
           }
         });
 
-    Object.getOwnPropertyNames(d).forEach(value => logging.info(value, d[value].length));
+    Object.getOwnPropertyNames(d).forEach(value => logging.info(`${value} ${d[value].length}`));
+    //Todo make this configurable
+    let msg = '';
+    const order = ['Epic', 'Feature', 'User Story', 'Task', 'Bug', 'Defect'];
+
+    const formatText = (v: string) => {
+      if (d[v]) {
+        const itemId = d[v].map((item: WorkItem) => {
+          if (item.fields) {
+            const fields: { [p: string]: string } = item.fields;
+            return `#${item.id} - ${fields['System.Title']}`;
+          }
+          return null;
+        });
+        if (itemId) {
+          msg += `## ${v}:\n\n${itemId.join('\n')}\n\n---\n\n`;
+        }
+      }
+    };
+
+    order.forEach(formatText);
+    Object.getOwnPropertyNames(d).filter(value => !order.includes(value)).forEach(formatText);
+
+    logging.info('Generated message: ');
+    logging.info(msg);
+    return msg;
   }
 
   async function extracted(branchName: string): Promise<Reference | null> {

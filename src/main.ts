@@ -276,7 +276,7 @@ yargs.command('release <base> <target>', 'Create a new release', argv => {
     } catch (e) {
       // Doesn't exist locally
       if (!branchName.includes(remote)) {
-        return extracted(`${remote}/${branchName}`);
+        return await extracted(`${remote}/${branchName}`);
       } else {
         logging.error(
           `Couldn't find branch ${branchName.replace(branchName, branchName.replace(`${remote}/`, ''))}`);

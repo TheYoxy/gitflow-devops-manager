@@ -3,6 +3,10 @@
   "version": "0.0.1",
   "description": "Tool ",
   "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TheYoxy/gitflow-devops-manager"
+  },
   "scripts": {
     "compile": "tsc -p .",
     "watch": "tsc -p . -w",

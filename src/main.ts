@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 
 import {getPersonalAccessTokenHandler, WebApi} from 'azure-devops-node-api';
+import {IGitApi} from 'azure-devops-node-api/GitApi';
+import {ResourceRef} from 'azure-devops-node-api/interfaces/common/VSSInterfaces';
+import {GitPullRequest} from 'azure-devops-node-api/interfaces/GitInterfaces';
 import {Identity} from 'azure-devops-node-api/interfaces/IdentitiesInterfaces';
 import {ConnectionData} from 'azure-devops-node-api/interfaces/LocationsInterfaces';
 import {WorkItem, WorkItemErrorPolicy, WorkItemType} from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces';
@@ -10,14 +13,15 @@ import config from 'config';
 import Listr from 'listr';
 import Git, {FetchOptions, Reference} from 'nodegit';
 import shell from 'shelljs';
-import winston, {format} from 'winston';
-import yargs from 'yargs';
+import winston from 'winston';
+import yargs, {Argv} from 'yargs';
+import {Arguments} from './arguments';
 import {Context} from './context';
 import './polyfills';
+import {Type} from './type';
 
 shell.config.silent = true;
 
-const {combine, timestamp, printf} = format;
 const logFile = new winston.transports.File(
   {
     dirname: 'logs',
@@ -25,24 +29,42 @@ const logFile = new winston.transports.File(
     level: 'debug',
     maxsize: 5242880, // 5MB
     maxFiles: 5,
-    format: combine(
-      timestamp(),
-      printf(
-        ({level, message, timestamp}) => {
-          return `[${timestamp}] ${level}: ${message}`;
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.metadata({fillExcept: ['message', 'level', 'timestamp', 'label']}),
+      winston.format.printf(
+        ({level, message, timestamp, metadata}) => {
+          let s = `[${timestamp}] ${level}: ${message}`;
+          if (metadata) {
+            s += ` ${JSON.stringify(metadata)}`;
+          }
+          return s;
         })
+    ),
+  });
+const jsonLogFile = new winston.transports.File(
+  {
+    dirname: 'logs',
+    filename: 'out.json.log',
+    level: 'debug',
+    maxsize: 5242880, // 5MB
+    maxFiles: 5,
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.metadata(),
+      winston.format.prettyPrint({depth: 10, colorize: false})
     ),
   });
 const logging = winston.createLogger(
   {
-    transports: [logFile],
+    transports: [logFile, jsonLogFile],
     exceptionHandlers: [logFile],
   });
 
 // tslint:disable-next-line:ban-ts-ignore
 // @ts-ignore
 // tslint:disable-next-line:no-unused-expression
-yargs.command('release <base> <target>', 'Create a new release', argv => {
+yargs.command('release <base> <target>', 'Create a new release', (argv: Argv<Arguments>) => {
   argv.positional('base', {
     describe: 'Base branch used to create a release',
     require: true,
@@ -54,8 +76,7 @@ yargs.command('release <base> <target>', 'Create a new release', argv => {
     describe: 'Remote repository to use',
     default: 'origin',
   });
-}, async (args: { _: string[], remote: string; path: string; base: string; target: string; }) => {
-
+}, async (args: Arguments) => {
   if (!shell.which('git')) {
     console.log(
       `${chalk.red("Couldn't find git installed on the system. Please install it before running again the CLI.")}`);
@@ -63,15 +84,12 @@ yargs.command('release <base> <target>', 'Create a new release', argv => {
     return;
   }
 
-  logging.debug(`Command used: ${args._}`);
-  logging.debug(`Loaded configuration: ${JSON.stringify(args, undefined)}`);
-  logging.debug(`Loaded configuration: ${JSON.stringify(config, undefined)}`);
+  logging.debug('Loaded configuration', {command: args._, args, config});
 
   const fetchOptions: FetchOptions = {
     callbacks: {
       credentials() {
-        return Git.Cred.userpassPlaintextNew(username
-          , password);
+        return Git.Cred.userpassPlaintextNew(username, password);
       },
     },
   };
@@ -84,17 +102,19 @@ yargs.command('release <base> <target>', 'Create a new release', argv => {
   const remote = args.remote as string;
   const path = args.path as string;
 
+  const generateTitle = false;
+
   const repo = await Git.Repository.open(path);
   if (repo == null) {
-    logging.crit('Couldn\'t find any git repo ');
+    logging.crit('Couldn\'t find any git repo', {path});
     return;
   } else {
-    logging.debug('Ope');
+    logging.debug('Opened git repository', {path});
   }
 
   const api: WebApi = new WebApi(`https://dev.azure.com/${organization}`, getPersonalAccessTokenHandler(password));
+  logging.debug('Connected to devops', {organization, project});
 
-  logging.debug('Connecting to devops');
   const connectionData: ConnectionData = await api.connect();
   const user: Identity = connectionData.authenticatedUser as Identity;
   if (user == null) {
@@ -105,9 +125,11 @@ yargs.command('release <base> <target>', 'Create a new release', argv => {
   }
 
   const workItemTracingApi: IWorkItemTrackingApi = await api.getWorkItemTrackingApi();
-  logging.debug('Starting command');
+  const gitApi: IGitApi = await api.getGitApi();
+  logging.debug('Loaded services for devops');
 
-  await new Listr([{
+  logging.debug('Starting command');
+  await new Listr<Context>([{
     title: 'git',
     task: () =>
       new Listr([{
@@ -158,7 +180,8 @@ yargs.command('release <base> <target>', 'Create a new release', argv => {
           }
         },
       }, {
-        title: 'Fetching logs', task: (ctx: Context) => {
+        title: 'Fetching logs',
+        task: (ctx: Context, task) => {
           logging.debug('Loading logs');
           const logs = shell.exec(
             `git log ${ctx.baseBranch.name()}..${ctx.targetBranch.name()} --pretty=%D%s%b --no-merges`)
@@ -167,12 +190,13 @@ yargs.command('release <base> <target>', 'Create a new release', argv => {
           logging.debug('Extracting ids');
 
           const match: string[] = logs.match(/#\d{3,4}/g) as string[];
-          logging.debug(`Extracted ${match.length} items`);
+          logging.debug('Match extracted', {count: match.length});
 
           const ids: number[] = Array.from(new Set<number>(match.map(value =>
                                                                        Number(value.replace('#', ''))).sort()));
           if (ids.length > 0) {
-            logging.debug(`Extracted ${ids.length} id${ids.length > 1 ? 's' : ''}`);
+            task.output = `Extracted ${ids.length} id${ids.length > 1 ? 's' : ''}`;
+            logging.debug('Ids extracted', {count: ids.length});
           } else {
             logging.warn('No ids has been extracted');
           }
@@ -182,90 +206,112 @@ yargs.command('release <base> <target>', 'Create a new release', argv => {
       }]),
   }, {
     title: 'Azure devops',
-    task: () => new Listr(
+    task: () => new Listr<Context>(
       [{
         title: 'Loading work items',
-        task: async (ctx: Context) => {
+        task: async (ctx: Context, task) => {
           const ids: number[] = ctx.ids;
           const n = Math.floor((ids.length / 200) + 1);
 
-          logging.debug(`Loading work items in ${n} requests`);
+          logging.debug(`Loading work items in ${n} requests`, {count: n});
 
-          const id = 'Loading work items';
-          logging.profile(id);
+          const id = 'Loading all work items';
+          const t: winston.Profiler = logging.startTimer();
           let wi: WorkItem[] = [];
           for (let i = 0; i < n; i++) {
+            const timer: winston.Profiler = logging.startTimer();
+            task.output = `Request ${i + 1} on ${n}`;
             const arr: WorkItem[] = await workItemTracingApi.getWorkItems(ids.slice(i * 200, (i + 1) * 200), undefined,
                                                                           undefined, undefined,
                                                                           WorkItemErrorPolicy.Omit, project);
-            logging.debug(`[${i + 1}/${n}] loaded ${arr.length} items`);
+            timer.done({message: 'Loading work items', step: {count: i + 1, total: n}, count: arr.length});
             wi = [...wi, ...arr];
           }
-          logging.profile(id);
-
-          logging.info(`Loaded ${wi.length} work items`);
+          t.done({message: id});
+          logging.info('Loaded work items', {count: wi.length});
           ctx.workItems = wi;
         },
       }, {
         title: 'Create message',
         task: async (ctx: Context) => {
-          await createMessage(ctx.workItems);
+
+          const types: WorkItemType[] = await workItemTracingApi.getWorkItemTypes(project);
+          const d = Object.fromEntries(types.map<Type>(value => ({
+            name: value.name!,
+            items: ctx.workItems.filter(
+              (wi: WorkItem) => wi && wi.fields && wi.fields!['System.WorkItemType'] === value.name),
+          })).filter((value: Type) => value.items.length > 0).map((value: Type) => [value.name, value.items]));
+
+          Object.getOwnPropertyNames(d).forEach(value => logging.info(`${value} ${d[value].length}`));
+          //Todo make this configurable
+          let msg = '';
+          const order = ['Epic', 'Feature', 'User Story', 'Task', 'Bug', 'Defect'];
+
+          const formatText = (v: string) => {
+            if (d[v]) {
+              const itemId = d[v].map((item: WorkItem) => {
+                if (item.fields) {
+                  const fields: { [p: string]: string } = item.fields;
+                  if (generateTitle) {
+                    return `#${item.id} - ${fields['System.Title']}`;
+                  } else {
+                    return `#${item.id}`;
+                  }
+                }
+                return null;
+              });
+              if (itemId) {
+                msg += `## ${v}:\n\n${itemId.join('\n')}\n\n---\n\n`;
+              }
+            }
+          };
+
+          order.forEach(formatText);
+          Object.getOwnPropertyNames(d).filter(value => !order.includes(value)).forEach(formatText);
+
+          //logging.debug('Generated message: ', {message: msg});
+          ctx.message = msg;
         },
+      }, {
+        title: 'Create title',
+        task: async (ctx: Context, task) => {
+          logging.debug('Creating title');
+          ctx.title = `Release of ${new Date().toLocaleDateString()}`;
+          task.output = 'Title: ' + ctx.title;
+        },
+      }, {
+        title: 'Create pull request',
+        task: async (ctx: Context) => {
+          let pullRequest: GitPullRequest = {
+            title: ctx.title,
+            description: ctx.message,
+            sourceRefName: ctx.baseBranch.name(),
+            targetRefName: ctx.targetBranch.name(),
+            workItemRefs: ctx.workItems.filter(item => item)
+              .map<ResourceRef>((item: WorkItem) => ({id: item.id!.toString()})),
+          };
+
+          logging.debug('Pull request details', {
+            title: pullRequest.title,
+            source: pullRequest.sourceRefName,
+            target: pullRequest.targetRefName,
+            nb: pullRequest.workItemRefs!.length,
+          });
+
+          const repo = await gitApi.getRepositories(project);
+          logging.debug('Downloaded remote git repository', {repositories: repo});
+          if (repo.length === 0) {
+            logging.crit('There isn\'t any repository linked to the selected project');
+          } else {
+            logging.warn(`Selecting first available repository ${repo[0].name}`);
+          }
+
+          pullRequest = await gitApi.createPullRequest(pullRequest, repo[0].id!);
+          logging.info('Pull request created', {pullRequest});
+        },
+        skip: () => 'Not in production',
       }]),
   }]).run();
-
-  async function createMessage(workItems: WorkItem[]): Promise<string> {
-    const types: WorkItemType[] = await workItemTracingApi.getWorkItemTypes(project);
-    const d: { [id: string]: WorkItem[]; } = {};
-
-    types.map(value => value.name)
-      .forEach(
-        (value: string | undefined) => {
-          if (value) {
-            d[value] = workItems.filter(
-              (wi: WorkItem) => {
-                if (wi && wi.fields) {
-                  // tslint:disable-next-line:no-any
-                  const fields: { [p: string]: any } = wi.fields;
-                  return fields['System.WorkItemType'] === value;
-                } else {
-                  return false;
-                }
-              });
-
-            if (d[value].length === 0) {
-              delete d[value];
-            }
-          }
-        });
-
-    Object.getOwnPropertyNames(d).forEach(value => logging.info(`${value} ${d[value].length}`));
-    //Todo make this configurable
-    let msg = '';
-    const order = ['Epic', 'Feature', 'User Story', 'Task', 'Bug', 'Defect'];
-
-    const formatText = (v: string) => {
-      if (d[v]) {
-        const itemId = d[v].map((item: WorkItem) => {
-          if (item.fields) {
-            const fields: { [p: string]: string } = item.fields;
-            return `#${item.id} - ${fields['System.Title']}`;
-          }
-          return null;
-        });
-        if (itemId) {
-          msg += `## ${v}:\n\n${itemId.join('\n')}\n\n---\n\n`;
-        }
-      }
-    };
-
-    order.forEach(formatText);
-    Object.getOwnPropertyNames(d).filter(value => !order.includes(value)).forEach(formatText);
-
-    logging.info('Generated message: ');
-    logging.info(msg);
-    return msg;
-  }
 
   async function extracted(branchName: string): Promise<Reference | null> {
     logging.debug(`Extracting ${branchName}`);
@@ -276,7 +322,7 @@ yargs.command('release <base> <target>', 'Create a new release', argv => {
     } catch (e) {
       // Doesn't exist locally
       if (!branchName.includes(remote)) {
-        return await extracted(`${remote}/${branchName}`);
+        return extracted(`${remote}/${branchName}`);
       } else {
         logging.error(
           `Couldn't find branch ${branchName.replace(branchName, branchName.replace(`${remote}/`, ''))}`);

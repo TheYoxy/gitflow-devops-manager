@@ -6,4 +6,6 @@ export interface Context {
   targetBranch: Reference;
   ids: number[];
   workItems: WorkItem[];
+  title: string;
+  message: string;
 }

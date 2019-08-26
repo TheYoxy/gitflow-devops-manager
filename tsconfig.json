@@ -5,7 +5,8 @@
     "lib": [
       "es6",
       "es2015",
-      "dom"
+      "dom",
+      "es2019"
     ],
     "declaration": true,
     "outDir": "dist",

@@ -11,13 +11,14 @@ import {IWorkItemTrackingApi} from 'azure-devops-node-api/WorkItemTrackingApi';
 import chalk from 'chalk';
 import config from 'config';
 import Listr from 'listr';
-import Git, {FetchOptions, Reference} from 'nodegit';
+import Git, {Branch} from 'nodegit';
 import shell from 'shelljs';
 import winston from 'winston';
 import yargs, {Argv} from 'yargs';
 import {Arguments} from './arguments';
 import {Context} from './context';
 import './polyfills';
+import {Repository} from './repository';
 import {Type} from './type';
 
 shell.config.silent = true;
@@ -86,13 +87,6 @@ yargs.command('release <base> <target>', 'Create a new release', (argv: Argv<Arg
 
   logging.debug('Loaded configuration', {command: args._, args, config});
 
-  const fetchOptions: FetchOptions = {
-    callbacks: {
-      credentials() {
-        return Git.Cred.userpassPlaintextNew(username, password);
-      },
-    },
-  };
   const username = config.get('Credentials.Username') as string;
   const password = config.get('Credentials.Token') as string;
 
@@ -104,7 +98,8 @@ yargs.command('release <base> <target>', 'Create a new release', (argv: Argv<Arg
 
   const generateTitle = false;
 
-  const repo = await Git.Repository.open(path);
+  const repo = await Repository.create(path, username, password, remote);
+
   if (repo == null) {
     logging.crit('Couldn\'t find any git repo', {path});
     return;
@@ -136,13 +131,13 @@ yargs.command('release <base> <target>', 'Create a new release', (argv: Argv<Arg
         title: 'Fetching repository',
         task: () => (async (): Promise<void> => {
           logging.debug(`Fetching repository at path [${path}]`);
-          await repo.fetch(remote, fetchOptions);
+          await repo.fetch();
           logging.debug('Repository fetched');
         })(),
       }, {
         title: 'Extracting local branch',
         task: async (ctx: Context) => {
-          const base = await extracted(args.base as string);
+          const base = await checkBranch(args.base as string);
           if (!base) {
             throw new Error('Can\'t find branch ' + args.base + ' in the target repository');
           }
@@ -151,7 +146,7 @@ yargs.command('release <base> <target>', 'Create a new release', (argv: Argv<Arg
       }, {
         title: 'Extracting remote branch',
         task: async (ctx: Context) => {
-          const target = await extracted(args.target as string);
+          const target = await checkBranch(args.target as string);
           if (!target) {
             throw new Error('Can\'t find branch ' + args.base + ' in the target repository');
           }
@@ -190,15 +185,15 @@ yargs.command('release <base> <target>', 'Create a new release', (argv: Argv<Arg
           logging.debug('Extracting ids');
 
           const match: string[] = logs.match(/#\d{3,4}/g) as string[];
-          logging.debug('Match extracted', {count: match.length});
+          logging.debug('Match checkBranch', {count: match.length});
 
           const ids: number[] = Array.from(new Set<number>(match.map(value =>
                                                                        Number(value.replace('#', ''))).sort()));
           if (ids.length > 0) {
             task.output = `Extracted ${ids.length} id${ids.length > 1 ? 's' : ''}`;
-            logging.debug('Ids extracted', {count: ids.length});
+            logging.debug('Ids checkBranch', {count: ids.length});
           } else {
-            logging.warn('No ids has been extracted');
+            logging.warn('No ids has been checkBranch');
           }
 
           ctx.ids = ids;
@@ -313,19 +308,21 @@ yargs.command('release <base> <target>', 'Create a new release', (argv: Argv<Arg
       }]),
   }]).run();
 
-  async function extracted(branchName: string): Promise<Reference | null> {
-    logging.debug(`Extracting ${branchName}`);
+  async function checkBranch(branchName: string): Promise<Branch | null> {
+
+    logging.debug('Extracting branch', {name: branchName});
     try {
       const branch = await repo.getBranch(branchName);
-      logging.debug(`Extraced ${branch}`);
+      logging.debug('Extraced branch', {branch});
       return branch;
     } catch (e) {
-      // Doesn't exist locally
-      if (!branchName.includes(remote)) {
-        return extracted(`${remote}/${branchName}`);
-      } else {
-        logging.error(
-          `Couldn't find branch ${branchName.replace(branchName, branchName.replace(`${remote}/`, ''))}`);
+      try {
+        const branch = await repo.getBranch(`${remote}/${branchName}`);
+        logging.debug('Extraced branch', {branch});
+        return branch;
+      } catch (e) {
+        // Branch doesn't exist
+        logging.error(`Couldn't find branch ${branchName.replace(branchName, branchName.replace(`${remote}/`, ''))}`);
         return null;
       }
     }

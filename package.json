@@ -10,7 +10,8 @@
   "scripts": {
     "compile": "tsc -p .",
     "watch": "tsc -p . -w",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "pretest": "npm run compile",
+    "test": "jasmine",
     "run": "node dist/main.js",
     "release": "gdm release b Release -p C:\\Behome",
     "release:osx": "tsc -p . && gdm release b Release -p ~/Dev/Behome"
@@ -24,14 +25,16 @@
   "devDependencies": {
     "@types/config": "0.0.34",
     "@types/core-js": "^2.5.2",
+    "@types/jasmine": "^3.4.0",
     "@types/listr": "^0.14.2",
     "@types/lodash": "^4.14.137",
     "@types/node": "^12.7.2",
-    "@types/nodegit": "^0.24.8",
+    "@types/nodegit": "^0.24.10",
     "@types/shelljs": "^0.8.5",
     "@types/signale": "^1.2.1",
     "@types/yargs": "^13.0.2",
-    "tslint": "^5.18.0",
+    "jasmine": "^3.4.0",
+    "tslint": "^5.19.0",
     "typescript": "^3.5.3"
   },
   "dependencies": {
@@ -43,11 +46,11 @@
     "enquirer": "^2.3.1",
     "listr": "^0.14.3",
     "lodash": "^4.17.15",
-    "nodegit": "^0.25.0-alpha.16",
+    "nodegit": "^0.25.1",
     "ora": "^3.4.0",
     "shelljs": "^0.8.3",
     "winston": "^3.2.1",
-    "yargs": "^13.3.0"
+    "yargs": "^14.0.0"
   },
   "bin": {
     "gdm": "dist/main.js"

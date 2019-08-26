@@ -165,6 +165,7 @@
       "allow-null-check"
     ],
     "use-isnan": true,
+    "unified-signatures": false,
     "variable-name": [
       true,
       "check-format",

@@ -16,10 +16,10 @@ export class Repository {
 
   static async create(path: string, username: string, password: string, remote = 'origin'): Promise<Repository> {
     if (!path) {
-      return Promise.reject('Path is empty');
+      throw new Error('Path is empty');
     }
     if (!(await fs.statSync(path)).isDirectory()) {
-      return Promise.reject('Path doesn\'t exist');
+      throw new Error('Path doesn\'t exist');
     }
 
     const repo = new Repository(path, {
@@ -52,7 +52,7 @@ export class Repository {
   }
 
   async fetch(): Promise<void> {
-    this._repo.fetch(this._remoteName, this._remoteOptions);
+    await this._repo.fetch(this._remoteName, this._remoteOptions);
   }
 
   async getBranch(branchName: string): Promise<Branch | null> {
@@ -72,8 +72,7 @@ export class Repository {
   }
 
   private async init() {
-    this._remote = await this._repo.getRemote(this._remoteName);
-
     this._repo = await Git.Repository.open(this._path);
+    this._remote = await this._repo.getRemote(this._remoteName);
   }
 }

@@ -7,16 +7,16 @@ import {ConnectionData} from 'azure-devops-node-api/interfaces/LocationsInterfac
 import {WorkItem, WorkItemErrorPolicy, WorkItemType} from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces';
 import {IWorkItemTrackingApi} from 'azure-devops-node-api/WorkItemTrackingApi';
 import chalk from 'chalk';
-import * as config from 'config';
+import config from 'config';
 import Git, {Branch} from 'nodegit';
-import * as  shell from 'shelljs';
+import * as shell from 'shelljs';
 import * as winston from 'winston';
 import yargs, {Argv} from 'yargs';
 import {Arguments} from './arguments';
 import {Context} from './context';
 import {Repository} from './repository';
 import {Type} from './type';
-import Listr from "listr";
+import Listr from 'listr';
 import './polyfills';
 
 shell.config.silent = true;
@@ -63,7 +63,7 @@ const logging = winston.createLogger(
 // tslint:disable-next-line:ban-ts-ignore
 // @ts-ignore
 // tslint:disable-next-line:no-unused-expression
-yargs.command('release <base> <target>', 'Create a new release', (argv: Argv<Arguments>) => {
+yargs.command<Arguments>('release <base> <target>', 'Create a new release', (argv: Argv<Arguments>) => {
   argv.positional('base', {
     describe: 'Base branch used to create a release',
     require: true,

@@ -3,15 +3,15 @@ import fs from 'fs';
 import 'jest';
 import trash from 'trash';
 import Git from 'nodegit';
-import * as os from "os";
-import * as path from "path";
+import * as os from 'os';
+import * as path from 'path';
 
 let folder!: string;
 const username = 'TheYoxy';
 const password = '6b589f0f00e03ae2a67d0d3389082d225087bb86';
 
 beforeAll(async (): Promise<void> => {
-  folder = fs.mkdtempSync(path.join(os.tmpdir(), 'gdm-'), "utf8");
+  folder = fs.mkdtempSync(path.join(os.tmpdir(), 'gdm-'), 'utf8');
   const r = await Git.Clone.clone('https://github.com/TheYoxy/gdm-test.git', folder, {
     fetchOpts: {
       callbacks: {
@@ -19,7 +19,7 @@ beforeAll(async (): Promise<void> => {
           return Git.Cred.userpassPlaintextNew(username, password);
         },
       },
-    }
+    },
   });
 });
 
@@ -54,7 +54,7 @@ describe('Repository', () => {
 
       it('should be null when getting a bad branch', () => {
         return expect(repo.getBranch(invalidBranchName)).resolves.toBeNull();
-      })
+      });
     });
 
     describe('is local', () => {

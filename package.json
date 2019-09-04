@@ -8,10 +8,14 @@
     "url": "https://github.com/TheYoxy/gitflow-devops-manager"
   },
   "scripts": {
-    "build": "webpack --mode=development",
+    "build": "npm run build:types && npm run build:js",
+    "build:types": "tsc --emitDeclarationOnly",
+    "build:js": "babel src --out-dir dist --extensions \".ts,.tsx\" --source-maps inline",
+    "type-check": "tsc -p . --noEmit",
+    "type-check:watch": "npm run type-check -- --watch",
     "compile": "tsc -p .",
     "watch": "tsc -p . -w",
-    "pretest": "npm run compile",
+    "pretest": "npm run build",
     "test": "jest",
     "run": "node dist/main.js",
     "release": "gdm release b Release -p C:\\Behome",
@@ -28,6 +32,7 @@
     "@babel/core": "^7.5.5",
     "@babel/plugin-proposal-class-properties": "^7.5.5",
     "@babel/plugin-proposal-object-rest-spread": "^7.5.5",
+    "@babel/polyfill": "^7.4.4",
     "@babel/preset-env": "^7.5.5",
     "@babel/preset-typescript": "^7.3.3",
     "@types/config": "0.0.34",
@@ -46,13 +51,10 @@
     "babel-preset-minify": "^0.5.1",
     "jest": "^24.9.0",
     "source-map-loader": "^0.2.4",
-    "terser-webpack-plugin": "^1.4.1",
     "ts-jest": "^24.0.2",
     "ts-loader": "^6.0.4",
     "tslint": "^5.19.0",
-    "typescript": "^3.5.3",
-    "webpack": "^4.39.2",
-    "webpack-cli": "^3.3.7"
+    "typescript": "^3.5.3"
   },
   "dependencies": {
     "axios": "^0.19.0",

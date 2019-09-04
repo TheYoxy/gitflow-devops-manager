@@ -45,9 +45,9 @@
     "@types/nodegit": "^0.24.10",
     "@types/shelljs": "^0.8.5",
     "@types/signale": "^1.2.1",
+    "@types/tmp": "^0.1.0",
     "@types/yargs": "^13.0.2",
     "babel-jest": "^24.9.0",
-    "babel-loader": "^8.0.6",
     "babel-preset-minify": "^0.5.1",
     "jest": "^24.9.0",
     "source-map-loader": "^0.2.4",
@@ -70,6 +70,7 @@
     "ora": "^3.4.0",
     "request": "^2.34",
     "shelljs": "^0.8.3",
+    "tmp": "^0.1.0",
     "trash": "^6.0.0",
     "winston": "^3.2.1",
     "yargs": "^14.0.0"

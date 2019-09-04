@@ -1,4 +1,4 @@
-import {Repository} from '../repository';
+import { Repository } from '../repository';
 import fs from 'fs';
 import 'jest';
 import trash from 'trash';
@@ -6,6 +6,7 @@ import Git from 'nodegit';
 import * as os from 'os';
 import * as path from 'path';
 import config from 'config';
+import tmp from 'tmp';
 
 let r!: Git.Repository;
 let folder!: string;
@@ -72,13 +73,47 @@ describe('Repository', () => {
       });
     });
 
+    describe('is remote', () => {
+      it('should be true on a valid remote branch', () => {
+        return expect(repo.isRemote(branchName)).resolves.toBe(true);
+      });
+
+      it('should be false on an invalid branch', () => {
+        return expect(repo.isRemote(invalidBranchName)).resolves.toBe(false);
+      });
+    });
+
+    describe('Pull branch', () => {
+      it('should pull the remote branch', () => {
+        return expect(repo.pull(branchName)).resolves.toBe(true);
+      });
+
+      it('should not pull the invalid remote branch', () => {
+        return expect(repo.pull(invalidBranchName)).resolves.toBe(false);
+      });
+    });
+
+    describe('Push branch', () => {
+      it('should push the remote branch', () => {
+        return expect(repo.push(branchName)).resolves.toBe(true);
+      });
+
+      it('should not push the invalid remote branch', () => {
+        return expect(repo.push(`${branchName}/${invalidBranchName}`)).resolves.toBe(false);
+      });
+    });
   });
 
   it('should build', () => {
     return expect(Repository.create(folder, '', '')).resolves.toBeInstanceOf(Repository);
   });
 
-  it('should not build', () => {
+  it('should not build on empty directory', () => {
     return expect(Repository.create('', '', '')).rejects.toThrow('Path is empty');
+  });
+
+  it('should not build on non directory', () => {
+    const name = tmp.fileSync({keep: false}).name;
+    return expect(Repository.create(name, '', '')).rejects.toThrow('Path doesn\'t exist');
   });
 });

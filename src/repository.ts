@@ -1,5 +1,5 @@
 import fs from 'fs';
-import Git, {Branch, FetchOptions, Remote} from 'nodegit';
+import Git, { Branch, FetchOptions, Remote } from 'nodegit';
 
 export class Repository {
   private readonly _path: string;
@@ -63,15 +63,25 @@ export class Repository {
     }
   }
 
-  async pull(branchName: string) {
-    await this._remote.download([`refs/heads/${branchName}:refs/heads/${branchName}`], this._remoteOptions);
+  async pull(branchName: string): Promise<boolean> {
+    try {
+      await this._remote.download([`refs/heads/${branchName}:refs/heads/${branchName}`], this._remoteOptions);   
+      return true;   
+    } catch (e) {
+      return false;
+    }
   }
 
-  async push(branchName: string) {
-    await this._remote.push([`refs/heads/${branchName}:refs/heads/${branchName}`], this._remoteOptions);
+  async push(branchName: string): Promise<boolean> {
+    try {
+      await this._remote.push([`refs/heads/${branchName}:refs/heads/${branchName}`], this._remoteOptions);
+      return true;      
+    } catch (e) {
+      return false;
+    }
   }
 
-  private async init() {
+  private async init(): Promise<void> {
     this._repo = await Git.Repository.open(this._path);
     this._remote = await this._repo.getRemote(this._remoteName);
   }

@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import {getPersonalAccessTokenHandler, WebApi} from 'azure-devops-node-api';
 import {IGitApi} from 'azure-devops-node-api/GitApi';
 import {ResourceRef} from 'azure-devops-node-api/interfaces/common/VSSInterfaces';
@@ -9,17 +7,17 @@ import {ConnectionData} from 'azure-devops-node-api/interfaces/LocationsInterfac
 import {WorkItem, WorkItemErrorPolicy, WorkItemType} from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces';
 import {IWorkItemTrackingApi} from 'azure-devops-node-api/WorkItemTrackingApi';
 import chalk from 'chalk';
-import config from 'config';
-import Listr from 'listr';
+import * as config from 'config';
 import Git, {Branch} from 'nodegit';
-import shell from 'shelljs';
-import winston from 'winston';
+import * as  shell from 'shelljs';
+import * as winston from 'winston';
 import yargs, {Argv} from 'yargs';
 import {Arguments} from './arguments';
 import {Context} from './context';
-import './polyfills';
 import {Repository} from './repository';
 import {Type} from './type';
+import Listr from "listr";
+import './polyfills';
 
 shell.config.silent = true;
 
@@ -188,7 +186,7 @@ yargs.command('release <base> <target>', 'Create a new release', (argv: Argv<Arg
           logging.debug('Match checkBranch', {count: match.length});
 
           const ids: number[] = Array.from(new Set<number>(match.map(value =>
-                                                                       Number(value.replace('#', ''))).sort()));
+            Number(value.replace('#', ''))).sort()));
           if (ids.length > 0) {
             task.output = `Extracted ${ids.length} id${ids.length > 1 ? 's' : ''}`;
             logging.debug('Ids checkBranch', {count: ids.length});
@@ -217,8 +215,8 @@ yargs.command('release <base> <target>', 'Create a new release', (argv: Argv<Arg
             const timer: winston.Profiler = logging.startTimer();
             task.output = `Request ${i + 1} on ${n}`;
             const arr: WorkItem[] = await workItemTracingApi.getWorkItems(ids.slice(i * 200, (i + 1) * 200), undefined,
-                                                                          undefined, undefined,
-                                                                          WorkItemErrorPolicy.Omit, project);
+              undefined, undefined,
+              WorkItemErrorPolicy.Omit, project);
             timer.done({message: 'Loading work items', step: {count: i + 1, total: n}, count: arr.length});
             wi = [...wi, ...arr];
           }

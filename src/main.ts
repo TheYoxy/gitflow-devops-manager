@@ -85,14 +85,14 @@ yargs.command<Arguments>('release <base> <target>', 'Create a new release', (arg
 
   logging.debug('Loaded configuration', {command: args._, args, config});
 
-  const username = config.get('Credentials.Username') as string;
-  const password = config.get('Credentials.Token') as string;
+  const username = config.get<string>('Credentials.Username');
+  const password = config.get<string>('Credentials.Token');
 
   const organization = 'AGBehome';
   const project = 'Behome';
 
-  const remote = args.remote as string;
-  const path = args.path as string;
+  const remote = args.remote;
+  const path = args.path;
 
   const generateTitle = false;
 

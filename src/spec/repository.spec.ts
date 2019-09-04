@@ -5,22 +5,15 @@ import trash from 'trash';
 import Git from 'nodegit';
 import * as os from 'os';
 import * as path from 'path';
+import config from 'config';
 
+let r!: Git.Repository;
 let folder!: string;
-const username = 'TheYoxy';
-const password = '6b589f0f00e03ae2a67d0d3389082d225087bb86';
+const username = config.get<string>('Credentials.Username');
+const password = config.get<string>('Credentials.Token');
 
 beforeAll(async (): Promise<void> => {
   folder = fs.mkdtempSync(path.join(os.tmpdir(), 'gdm-'), 'utf8');
-  const r = await Git.Clone.clone('https://github.com/TheYoxy/gdm-test.git', folder, {
-    fetchOpts: {
-      callbacks: {
-        credentials() {
-          return Git.Cred.userpassPlaintextNew(username, password);
-        },
-      },
-    },
-  });
 });
 
 afterAll(async (): Promise<void> => {
@@ -34,6 +27,18 @@ describe('Git folder', () => {
 });
 
 describe('Repository', () => {
+  beforeAll(async (): Promise<void> => {
+    r = await Git.Clone.clone('https://github.com/TheYoxy/gdm-test.git', folder, {
+      fetchOpts: {
+        callbacks: {
+          credentials() {
+            return Git.Cred.userpassPlaintextNew(username, password);
+          },
+        },
+      },
+    });
+  });
+
   describe('when created', () => {
     const branchName = 'master';
     const invalidBranchName = 'A bad branch name';

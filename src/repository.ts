@@ -90,18 +90,18 @@ export class Repository {
         });
 
         await this._repo.mergeBranches(branchName, from, undefined,
-                                       Merge.PREFERENCE.FASTFORWARD_ONLY);
+          Merge.PREFERENCE.FASTFORWARD_ONLY);
       }
       return true;
     } catch (e) {
       logging.error('pull error',
-                    {
-                      label: 'pull',
-                      error: e,
-                      branchName,
-                      remoteName: this._remoteName,
-                      remote: this._remote,
-                    });
+        {
+          label: 'pull',
+          error: e,
+          branchName,
+          remoteName: this._remoteName,
+          remote: this._remote,
+        });
       return false;
     }
   }
@@ -131,15 +131,15 @@ export class Repository {
         //todo sync method
       } else {
         logging.warn(`Branch ${branchName} doesn\'t exist in the remote ${this._remoteName}`,
-                     {branchName, remoteName: this._remoteName});
+          {branchName, remoteName: this._remoteName});
         logging.debug(`Pushing branch ${branchName} in the remote ${this._remoteName}`,
-                      {branchName, remoteName: this._remoteName});
+          {branchName, remoteName: this._remoteName});
         if (!await this.push(branchName)) {
           logging.crit('Push failed');
           throw new Error(`Unable to push branch ${branchName}`);
         } else {
           logging.info(`Branch ${branchName} has been successfully pushed on remote ${this._remoteName}`,
-                       {branchName, remoteName: this._remoteName});
+            {branchName, remoteName: this._remoteName});
           return this.getBranch(branchName);
         }
       }
@@ -148,15 +148,15 @@ export class Repository {
       logging.debug(`Looking for branch in the remote ${this._remoteName}`, {branchName, remoteName: this._remoteName});
       if (await this.isRemote(branchName)) {
         logging.debug(`Branch ${branchName} exist in the remote ${this._remoteName}`,
-                      {branchName, remoteName: this._remoteName});
+          {branchName, remoteName: this._remoteName});
         logging.debug(`Pulling branch ${branchName} locally`, {branchName});
         if (!await this.pull(branchName)) {
           logging.crit(`Unable to pull branch ${branchName} from remote ${this._remoteName}`,
-                       {branchName, remoteName: this._remoteName});
+            {branchName, remoteName: this._remoteName});
           throw new Error(`Unable to pull branch ${branchName}`);
         } else {
           logging.debug(`Branch ${branchName} successfully pulled from remote ${this._remoteName}`,
-                        {branchName, remoteName: this._remoteName});
+            {branchName, remoteName: this._remoteName});
           return this.getBranch(branchName);
         }
       } else {
@@ -172,27 +172,28 @@ export class Repository {
     const targetBranch: Reference | null = await this.getBranch(targetBranchName);
     if (sourceBranch && targetBranch) {
       const cmp = sourceBranch.target().cmp(targetBranch.target());
-      switch (cmp) {
-        case -1:
-          return BranchState.Behind;
-        case 0:
-          return BranchState.Equals;
-        case 1:
-          return BranchState.Ahead;
-        default:
-          throw new Error('Cmp isn\'t in the range');
+      if (cmp == 0)
+        return BranchState.Equals;
+      else if (cmp < 0)
+        return BranchState.Behind;
+      else if (cmp > 0)
+        return BranchState.Ahead;
+      else {
+        logging.error(`${cmp}`, {label: 'compareBranch', sourceBranch: sourceBranchName, cmp});
+        throw new Error('Cmp isn\'t in the range');
+
       }
     } else {
       const msg: string[] = [];
       if (!sourceBranch) {
         msg.push(`${sourceBranchName} branch`);
         logging.error(`Branch ${sourceBranchName} doesn't exist`,
-                      {label: 'compareBranch', sourceBranch: sourceBranchName});
+          {label: 'compareBranch', sourceBranch: sourceBranchName});
       }
       if (!targetBranch) {
         msg.push(`${targetBranchName} branch`);
         logging.error(`Branch ${targetBranchName} doesn't exist`,
-                      {label: 'compareBranch', targetBranch: targetBranchName});
+          {label: 'compareBranch', targetBranch: targetBranchName});
       }
       throw new Error(msg.join('and') + ' doesn\'t exist');
     }

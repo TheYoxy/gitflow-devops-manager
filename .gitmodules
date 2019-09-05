@@ -1,0 +1,3 @@
+[submodule "gdm-test"]
+	path = gdm-test
+	url = https://github.com/TheYoxy/gdm-test.git

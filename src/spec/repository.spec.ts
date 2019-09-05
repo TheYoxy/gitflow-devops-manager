@@ -1,28 +1,24 @@
-import { Repository } from '../repository';
+import config from 'config';
 import fs from 'fs';
 import 'jest';
-import trash from 'trash';
 import Git from 'nodegit';
 import * as os from 'os';
 import * as path from 'path';
-import config from 'config';
 import tmp from 'tmp';
+import {BranchState, Repository} from '../repository';
 
 let r!: Git.Repository;
 let folder!: string;
 const username = config.get<string>('Credentials.Username');
 const password = config.get<string>('Credentials.Token');
 
-beforeAll(async (): Promise<void> => {
+beforeAll(() => {
   folder = fs.mkdtempSync(path.join(os.tmpdir(), 'gdm-'), 'utf8');
-});
-
-afterAll(async (): Promise<void> => {
-  await trash(folder);
 });
 
 describe('Git folder', () => {
   it('should exist', () => {
+    console.log(folder);
     expect(fs.statSync(folder).isDirectory()).toBe(true);
   });
 });
@@ -38,6 +34,7 @@ describe('Repository', () => {
         },
       },
     });
+    await r.setHead('refs/remotes/origin/master');
   });
 
   describe('when created', () => {
@@ -91,6 +88,13 @@ describe('Repository', () => {
       it('should not pull the invalid remote branch', () => {
         return expect(repo.pull(invalidBranchName)).resolves.toBe(false);
       });
+
+      it.each(['develop', 'release', 'master'])
+      ('should pull %s and have the branch locally',
+       async (branchName: string) => {
+         await expect(repo.pull(branchName)).resolves.toBe(true);
+         await expect(repo.isLocal(branchName)).resolves.toBe(true);
+       });
     });
 
     describe('Push branch', () => {
@@ -100,6 +104,36 @@ describe('Repository', () => {
 
       it('should not push the invalid remote branch', () => {
         return expect(repo.push(`${branchName}/${invalidBranchName}`)).resolves.toBe(false);
+      });
+    });
+
+    describe('.compareBranch', () => {
+      const oldBranch = 'master';
+      const newBranch = 'develop';
+      const equalOldBranch = 'release';
+
+      beforeAll(async () => {
+        // tslint:disable-next-line:forin
+        for (const branch in [oldBranch, newBranch, equalOldBranch]) {
+          await repo.fetch();
+          await repo.pull(branch);
+        }
+      });
+
+      it.each([oldBranch, newBranch, equalOldBranch])('branch %s should exist', (branchName: string) => {
+        return expect(repo.isLocal(branchName)).resolves.toBe(true);
+      });
+
+      it(`${newBranch} should be ahead of ${oldBranch}`, () => {
+        return expect(repo.compareBranch(newBranch, oldBranch)).resolves.toBe(BranchState.Ahead);
+      });
+
+      it(`${oldBranch} should be behind ${newBranch}`, () => {
+        return expect(repo.compareBranch(oldBranch, newBranch)).resolves.toBe(BranchState.Behind);
+      });
+
+      it(`${oldBranch} shoud be equals as ${equalOldBranch}`, () => {
+        return expect(repo.compareBranch(oldBranch, equalOldBranch)).resolves.toBe(BranchState.Equals);
       });
     });
   });

@@ -1,6 +1,6 @@
 import fs from 'fs';
-import Git, { Branch, FetchOptions, Remote } from 'nodegit';
-import { logging } from './logging';
+import Git, {Branch, Commit, FetchOptions, Merge, Reference, Remote, Reset} from 'nodegit';
+import {logging} from './logging';
 
 export class Repository {
   private readonly _path: string;
@@ -13,6 +13,10 @@ export class Repository {
     this._path = path;
     this._remoteOptions = fetchOptions;
     this._remoteName = remoteName;
+  }
+
+  get remoteName(): string {
+    return this._remoteName;
   }
 
   static async create(path: string, username: string, password: string, remote = 'origin'): Promise<Repository> {
@@ -39,7 +43,7 @@ export class Repository {
       await this._repo.getBranch(branchName);
       return true;
     } catch (e) {
-      logging.error('isLocal error', {label: 'isLocal', error: e});
+      // logging.error('isLocal error', {label: 'isLocal', error: e, branchName});
       return false;
     }
   }
@@ -49,30 +53,55 @@ export class Repository {
       await this._repo.getBranch(`${this._remoteName}/${branchName}`);
       return true;
     } catch (e) {
-      logging.error('isRemote error', {label: 'isRemote', error: e});
+      // logging.error('isRemote error', {label: 'isRemote', error: e, branchName});
       return false;
     }
   }
 
   async fetch(): Promise<void> {
-    await this._repo.fetch(this._remoteName, this._remoteOptions);
+    try {
+      await this._repo.fetch(this._remoteName, this._remoteOptions);
+    } catch (e) {
+      console.log('Fetch error:', e);
+    }
   }
 
-  async getBranch(branchName: string): Promise<Branch | null> {
+  async getBranch(branchName: string): Promise<Reference | null> {
     try {
-      return (await this._repo.getBranch(branchName)) as Branch;
+      return await this._repo.getReference(branchName);
     } catch (e) {
-      logging.error('getBranch error', {label: 'getBranch', error: e});
+      logging.error('getBranch error', {label: 'getBranch', error: e, branchName});
       return null;
     }
   }
 
   async pull(branchName: string): Promise<boolean> {
     try {
-      await this._remote.download([`refs/heads/${branchName}:refs/heads/${branchName}`], this._remoteOptions);
+      const from = `refs/remotes/${this._remoteName}/${branchName}`;
+      if (!await this.isLocal(branchName)) {
+        logging.debug('Branch doesn\'t exist locally', {branchName});
+        await this.createBranchFromRemote(branchName, branchName);
+      } else {
+        logging.debug('Branch pulled by merging', {
+          label: 'pull',
+          branchName,
+          remoteName: this._remoteName,
+          remote: this._remote,
+        });
+
+        await this._repo.mergeBranches(branchName, from, undefined,
+                                       Merge.PREFERENCE.FASTFORWARD_ONLY);
+      }
       return true;
     } catch (e) {
-      logging.error('pull error', {label: 'pull', error: e});
+      logging.error('pull error',
+                    {
+                      label: 'pull',
+                      error: e,
+                      branchName,
+                      remoteName: this._remoteName,
+                      remote: this._remote,
+                    });
       return false;
     }
   }
@@ -82,8 +111,120 @@ export class Repository {
       await this._remote.push([`refs/heads/${branchName}:refs/heads/${branchName}`], this._remoteOptions);
       return true;
     } catch (e) {
-      logging.error('push error', {label: 'push', error: e});
+      logging.error('push error', {label: 'push', error: e, branchName});
       return false;
+    }
+  }
+
+  async checkout(branchName: string): Promise<Reference> {
+    return this._repo.checkoutBranch(branchName);
+  }
+
+  async checkBranch(branchName: string): Promise<Branch | null> {
+    logging.debug(`Checking if branch ${branchName} exist in local`, {branchName});
+    if (await this.isLocal(branchName)) {
+      logging.debug(`Branch ${branchName} exist locally`, {branchName});
+      logging.debug(`Checking if branch exist in the remote ${this._remoteName}`, {remoteName: this._remoteName});
+      if (await this.isRemote(branchName)) {
+        logging.debug(`Branch ${branchName} exist in the remote.`, {branchName});
+        logging.debug('Syncing branches');
+        //todo sync method
+      } else {
+        logging.warn(`Branch ${branchName} doesn\'t exist in the remote ${this._remoteName}`,
+                     {branchName, remoteName: this._remoteName});
+        logging.debug(`Pushing branch ${branchName} in the remote ${this._remoteName}`,
+                      {branchName, remoteName: this._remoteName});
+        if (!await this.push(branchName)) {
+          logging.crit('Push failed');
+          throw new Error(`Unable to push branch ${branchName}`);
+        } else {
+          logging.info(`Branch ${branchName} has been successfully pushed on remote ${this._remoteName}`,
+                       {branchName, remoteName: this._remoteName});
+          return this.getBranch(branchName);
+        }
+      }
+    } else {
+      logging.warn(`Branch ${branchName} doesn\'t exist locally`, {branchName});
+      logging.debug(`Looking for branch in the remote ${this._remoteName}`, {branchName, remoteName: this._remoteName});
+      if (await this.isRemote(branchName)) {
+        logging.debug(`Branch ${branchName} exist in the remote ${this._remoteName}`,
+                      {branchName, remoteName: this._remoteName});
+        logging.debug(`Pulling branch ${branchName} locally`, {branchName});
+        if (!await this.pull(branchName)) {
+          logging.crit(`Unable to pull branch ${branchName} from remote ${this._remoteName}`,
+                       {branchName, remoteName: this._remoteName});
+          throw new Error(`Unable to pull branch ${branchName}`);
+        } else {
+          logging.debug(`Branch ${branchName} successfully pulled from remote ${this._remoteName}`,
+                        {branchName, remoteName: this._remoteName});
+          return this.getBranch(branchName);
+        }
+      } else {
+        logging.crit(`Unable to find branch ${branchName} in the repository`, {branchName});
+        throw new Error(`Unable to find branch ${branchName} in the repository`);
+      }
+    }
+    return null;
+  }
+
+  async compareBranch(sourceBranchName: string, targetBranchName: string) {
+    const sourceBranch: Reference | null = await this.getBranch(sourceBranchName);
+    const targetBranch: Reference | null = await this.getBranch(targetBranchName);
+    if (sourceBranch && targetBranch) {
+      const cmp = sourceBranch.target().cmp(targetBranch.target());
+      switch (cmp) {
+        case -1:
+          return BranchState.Behind;
+        case 0:
+          return BranchState.Equals;
+        case 1:
+          return BranchState.Ahead;
+        default:
+          throw new Error('Cmp isn\'t in the range');
+      }
+    } else {
+      const msg: string[] = [];
+      if (!sourceBranch) {
+        msg.push(`${sourceBranchName} branch`);
+        logging.error(`Branch ${sourceBranchName} doesn't exist`,
+                      {label: 'compareBranch', sourceBranch: sourceBranchName});
+      }
+      if (!targetBranch) {
+        msg.push(`${targetBranchName} branch`);
+        logging.error(`Branch ${targetBranchName} doesn't exist`,
+                      {label: 'compareBranch', targetBranch: targetBranchName});
+      }
+      throw new Error(msg.join('and') + ' doesn\'t exist');
+    }
+  }
+
+  private async createBranchFromRemote(branchName: string, remoteBranchName: string) {
+    let currentBranch: Reference | null = null;
+    try {
+      currentBranch = await this._repo.getCurrentBranch();
+      logging.debug('Getting current branch', {label: 'createBranchFromRemote', branchName, currentBranch});
+    } catch (e) {
+      logging.warn('Can\'t load current branch', {label: 'createBranchFromRemote', branchName});
+    }
+
+    const c: Commit = await this._repo.getHeadCommit();
+    logging.debug('Get head commit', {label: 'createBranchFromRemote', branchName, c});
+
+    const branch: Reference = await this._repo.createBranch(branchName, c, false);
+    logging.debug('Created branch', {label: 'createBranchFromRemote', branchName});
+
+    await this._repo.checkoutBranch(branch);
+    // Todo check if remotebranchname contains remote name
+
+    const commit: Commit = await this._repo.getReferenceCommit(`refs/remotes/${this._remoteName}/${remoteBranchName}`);
+    logging.debug('Loaded commit', {label: 'createBranchFromRemote', branchName, commit});
+
+    await Git.Reset.reset(this._repo, commit, Reset.TYPE.HARD, {});
+
+    logging.debug('Setting up branch to remote commit', {label: 'createBranchFromRemote', branchName});
+    if (currentBranch) {
+      await this._repo.checkoutBranch(currentBranch);
+      logging.debug('Checking out branch', {label: 'createBranchFromRemote', branchName});
     }
   }
 
@@ -92,49 +233,11 @@ export class Repository {
     this._remote = await this._repo.getRemote(this._remoteName);
   }
 
-  async checkBranch(branchName: string): Promise<Branch | null> {
-    logging.debug(`Checking if branch ${branchName} exist in local`, { branchName });
-    if (await this.isLocal(branchName)) {
-      logging.debug(`Branch ${branchName} exist locally`, { branchName });
-      logging.debug(`Checking if branch exist in the remote ${this._remoteName}`, { remoteName: this._remoteName });
-      if (await this.isRemote(branchName)) {
-        logging.debug(`Branch ${branchName} exist in the remote.`, { branchName });
-        logging.debug('Syncing branches');
-        //todo sync method
-      }
-      else {
-        logging.warn(`Branch ${branchName} doesn\'t exist in the remote ${this._remoteName}`, { branchName, remoteName: this._remoteName });
-        logging.debug(`Pushing branch ${branchName} in the remote ${this._remoteName}`, { branchName, remoteName: this._remoteName });
-        if (!await this.push(branchName)) {
-          logging.crit('Push failed');
-          throw new Error(`Unable to push branch ${branchName}`);
-        }
-        else {
-          logging.info(`Branch ${branchName} has been successfully pushed on remote ${this._remoteName}`, { branchName, remoteName: this._remoteName });
-          return this.getBranch(branchName);
-        }
-      }
-    }
-    else {
-      logging.warn(`Branch ${branchName} doesn\'t exist locally`, { branchName });
-      logging.debug(`Looking for branch in the remote ${this._remoteName}`, { branchName, remoteName: this._remoteName });
-      if (await this.isRemote(branchName)) {
-        logging.debug(`Branch ${branchName} exist in the remote ${this._remoteName}`, { branchName, remoteName: this._remoteName });
-        logging.debug(`Pulling branch ${branchName} locally`, { branchName });
-        if (!await this.pull(branchName)) {
-          logging.crit(`Unable to pull branch ${branchName} from remote ${this._remoteName}`, { branchName, remoteName: this._remoteName });
-          throw new Error(`Unable to pull branch ${branchName}`);
-        }
-        else {
-          logging.debug(`Branch ${branchName} successfully pulled from remote ${this._remoteName}`, { branchName, remoteName: this._remoteName });
-          return this.getBranch(branchName);
-        }
-      }
-      else {
-        logging.crit(`Unable to find branch ${branchName} in the repository`, { branchName });
-        throw new Error(`Unable to find branch ${branchName} in the repository`);
-      }
-    }
-    return null;
+  private async syncBranch(branchName: string) {
+
   }
+}
+
+export enum BranchState {
+  Ahead, Behind, Equals,
 }

@@ -12,11 +12,11 @@ const logFile = new winston.transports.File(
             winston.format.metadata({ fillExcept: ['message', 'level', 'timestamp', 'label'] }),
             winston.format.printf(
                 ({ level, message, timestamp, label, metadata }) => {
-                    let s = `[${timestamp}] `;
+                  let s = `[${timestamp}] ${level}`;
                     if (label) {
-                        s += `${label}-`;
+                      s += ` {${label}}`;
                     }
-                    s += `${level}: ${message}`;
+                  s += `: ${message}`;
                     if (metadata) {
                         s += ` ${JSON.stringify(metadata)}`;
                     }

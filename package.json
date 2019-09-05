@@ -8,14 +8,14 @@
     "url": "https://github.com/TheYoxy/gitflow-devops-manager"
   },
   "scripts": {
-    "prestart": "npm run build",
-    "pretest": "npm run build",
+    "prestart": "yarn build",
+    "pretest": "yarn build",
     "test": "jest",
-    "build": "npm run build:types && npm run build:js",
+    "build": "yarn build:types && yarn build:js",
     "build:types": "tsc --emitDeclarationOnly",
     "build:js": "babel src --out-dir dist --extensions \".ts,.tsx\" --source-maps inline",
     "type-check": "tsc -p . --noEmit",
-    "type-check:watch": "npm run type-check -- --watch",
+    "type-check:watch": "yarn type-check -- --watch",
     "release": "gdm release b Release -p C:\\Behome",
     "release:osx": "gdm release b Release -p ~/Dev/Behome",
     "release:linux": "gdm release b Release -p /mnt/c/Users/floryan/Dev/Behome "

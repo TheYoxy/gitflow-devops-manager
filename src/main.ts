@@ -1,25 +1,25 @@
 #!/usr/bin/env node
-import { getPersonalAccessTokenHandler, WebApi } from 'azure-devops-node-api';
-import { IGitApi } from 'azure-devops-node-api/GitApi';
-import { ResourceRef } from 'azure-devops-node-api/interfaces/common/VSSInterfaces';
-import { GitPullRequest } from 'azure-devops-node-api/interfaces/GitInterfaces';
-import { Identity } from 'azure-devops-node-api/interfaces/IdentitiesInterfaces';
-import { ConnectionData } from 'azure-devops-node-api/interfaces/LocationsInterfaces';
-import { WorkItem, WorkItemErrorPolicy, WorkItemType } from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces';
-import { IWorkItemTrackingApi } from 'azure-devops-node-api/WorkItemTrackingApi';
+import {getPersonalAccessTokenHandler, WebApi} from 'azure-devops-node-api';
+import {IGitApi} from 'azure-devops-node-api/GitApi';
+import {ResourceRef} from 'azure-devops-node-api/interfaces/common/VSSInterfaces';
+import {GitPullRequest} from 'azure-devops-node-api/interfaces/GitInterfaces';
+import {Identity} from 'azure-devops-node-api/interfaces/IdentitiesInterfaces';
+import {ConnectionData} from 'azure-devops-node-api/interfaces/LocationsInterfaces';
+import {WorkItem, WorkItemErrorPolicy, WorkItemType} from 'azure-devops-node-api/interfaces/WorkItemTrackingInterfaces';
+import {IWorkItemTrackingApi} from 'azure-devops-node-api/WorkItemTrackingApi';
 import chalk from 'chalk';
 import config from 'config';
-import Git, { Branch } from 'nodegit';
-import * as shell from 'shelljs';
-import yargs, { Argv } from 'yargs';
-import { Arguments } from './arguments';
-import { Context } from './context';
-import { Repository } from './repository';
-import { Type } from './type';
 import Listr from 'listr';
-import './polyfills';
-import {logging} from './logging';
+import Git, {Branch} from 'nodegit';
+import * as shell from 'shelljs';
 import * as winston from 'winston';
+import yargs, {Argv} from 'yargs';
+import {Arguments} from './arguments';
+import {Context} from './context';
+import {logging} from './logging';
+import './polyfills';
+import {Repository} from './repository';
+import {Type} from './type';
 
 shell.config.silent = true;
 
@@ -46,7 +46,7 @@ yargs.command<Arguments>('release <base> <target>', 'Create a new release', (arg
     return;
   }
 
-  logging.debug('Loaded configuration', { command: args._, args, config });
+  logging.debug('Loaded configuration', {command: args._, args, config});
 
   const username = config.get<string>('Credentials.Username');
   const password = config.get<string>('Credentials.Token');
@@ -62,14 +62,14 @@ yargs.command<Arguments>('release <base> <target>', 'Create a new release', (arg
   const repo = await Repository.create(path, username, password, remote);
 
   if (repo == null) {
-    logging.crit('Couldn\'t find any git repo', { path });
+    logging.crit('Couldn\'t find any git repo', {path});
     return;
   } else {
-    logging.debug('Opened git repository', { path });
+    logging.debug('Opened git repository', {path});
   }
 
   const api: WebApi = new WebApi(`https://dev.azure.com/${organization}`, getPersonalAccessTokenHandler(password));
-  logging.debug('Connected to devops', { organization, project });
+  logging.debug('Connected to devops', {organization, project});
 
   const connectionData: ConnectionData = await api.connect();
   const user: Identity = connectionData.authenticatedUser as Identity;
@@ -147,13 +147,13 @@ yargs.command<Arguments>('release <base> <target>', 'Create a new release', (arg
           logging.debug('Extracting ids');
 
           const match: string[] = logs.match(/#\d{3,4}/g) as string[];
-          logging.debug('Match checkBranch', { count: match.length });
+          logging.debug('Match checkBranch', {count: match.length});
 
           const ids: number[] = Array.from(new Set<number>(match.map(value =>
-            Number(value.replace('#', ''))).sort()));
+                                                                       Number(value.replace('#', ''))).sort()));
           if (ids.length > 0) {
             task.output = `Extracted ${ids.length} id${ids.length > 1 ? 's' : ''}`;
-            logging.debug('Ids checkBranch', { count: ids.length });
+            logging.debug('Ids checkBranch', {count: ids.length});
           } else {
             logging.warn('No ids has been checkBranch');
           }
@@ -170,7 +170,7 @@ yargs.command<Arguments>('release <base> <target>', 'Create a new release', (arg
           const ids: number[] = ctx.ids;
           const n = Math.floor((ids.length / 200) + 1);
 
-          logging.debug(`Loading work items in ${n} requests`, { count: n });
+          logging.debug(`Loading work items in ${n} requests`, {count: n});
 
           const id = 'Loading all work items';
           const t: winston.Profiler = logging.startTimer();
@@ -179,13 +179,13 @@ yargs.command<Arguments>('release <base> <target>', 'Create a new release', (arg
             const timer: winston.Profiler = logging.startTimer();
             task.output = `Request ${i + 1} on ${n}`;
             const arr: WorkItem[] = await workItemTracingApi.getWorkItems(ids.slice(i * 200, (i + 1) * 200), undefined,
-              undefined, undefined,
-              WorkItemErrorPolicy.Omit, project);
-            timer.done({ message: 'Loading work items', step: { count: i + 1, total: n }, count: arr.length });
+                                                                          undefined, undefined,
+                                                                          WorkItemErrorPolicy.Omit, project);
+            timer.done({message: 'Loading work items', step: {count: i + 1, total: n}, count: arr.length});
             wi = [...wi, ...arr];
           }
-          t.done({ message: id });
-          logging.info('Loaded work items', { count: wi.length });
+          t.done({message: id});
+          logging.info('Loaded work items', {count: wi.length});
           ctx.workItems = wi;
         },
       }, {
@@ -245,7 +245,7 @@ yargs.command<Arguments>('release <base> <target>', 'Create a new release', (arg
             sourceRefName: ctx.baseBranch.name(),
             targetRefName: ctx.targetBranch.name(),
             workItemRefs: ctx.workItems.filter(item => item)
-              .map<ResourceRef>((item: WorkItem) => ({ id: item.id!.toString() })),
+              .map<ResourceRef>((item: WorkItem) => ({id: item.id!.toString()})),
           };
 
           logging.debug('Pull request details', {
@@ -256,7 +256,7 @@ yargs.command<Arguments>('release <base> <target>', 'Create a new release', (arg
           });
 
           const repo = await gitApi.getRepositories(project);
-          logging.debug('Downloaded remote git repository', { repositories: repo });
+          logging.debug('Downloaded remote git repository', {repositories: repo});
           if (repo.length === 0) {
             logging.crit('There isn\'t any repository linked to the selected project');
           } else {
@@ -264,7 +264,7 @@ yargs.command<Arguments>('release <base> <target>', 'Create a new release', (arg
           }
 
           pullRequest = await gitApi.createPullRequest(pullRequest, repo[0].id!);
-          logging.info('Pull request created', { pullRequest });
+          logging.info('Pull request created', {pullRequest});
         },
         skip: () => 'Not in production',
       }]),

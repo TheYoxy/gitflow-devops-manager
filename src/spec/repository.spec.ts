@@ -37,7 +37,7 @@ describe('Repository', () => {
     await r.setHead('refs/remotes/origin/master');
   });
 
-  describe('when created', () => {
+  describe('.create', () => {
     const branchName = 'master';
     const invalidBranchName = 'A bad branch name';
 
@@ -46,11 +46,13 @@ describe('Repository', () => {
       repo = await Repository.create(folder, username, password);
     });
 
-    it('should be able to fetch the remote', () => {
-      return expect(repo.fetch()).resolves.toBeUndefined();
+    describe('.fetch', () => {
+      it('should be able to fetch the remote', () => {
+        return expect(repo.fetch()).resolves.toBeUndefined();
+      });
     });
 
-    describe('get branch', () => {
+    describe('.getBranch', () => {
       it('should be able to get master branch', () => {
         return expect(repo.getBranch(branchName)).resolves.toBeTruthy();
       });
@@ -60,7 +62,7 @@ describe('Repository', () => {
       });
     });
 
-    describe('is local', () => {
+    describe('.isLocal', () => {
       it('should be true on a valid local branch', () => {
         return expect(repo.isLocal(branchName)).resolves.toBe(true);
       });
@@ -70,7 +72,7 @@ describe('Repository', () => {
       });
     });
 
-    describe('is remote', () => {
+    describe('.isRemote', () => {
       it('should be true on a valid remote branch', () => {
         return expect(repo.isRemote(branchName)).resolves.toBe(true);
       });
@@ -80,7 +82,7 @@ describe('Repository', () => {
       });
     });
 
-    describe('Pull branch', () => {
+    describe('.pull', () => {
       it('should pull the remote branch', () => {
         return expect(repo.pull(branchName)).resolves.toBe(true);
       });
@@ -97,7 +99,7 @@ describe('Repository', () => {
        });
     });
 
-    describe('Push branch', () => {
+    describe('.push', () => {
       it('should push the remote branch', () => {
         return expect(repo.push(branchName)).resolves.toBe(true);
       });

@@ -37,9 +37,6 @@ Thumbs.db
 # Ignore built ts files
 dist/**/*
 
-# ignore yarn.lock
-yarn.lock
-
 # Created by https://www.gitignore.io/api/webstorm
 # Edit at https://www.gitignore.io/?templates=webstorm
 

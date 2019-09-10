@@ -4,4 +4,6 @@ export interface Arguments {
   path: string;
   base: string;
   target: string;
+  title: boolean;
+  print: boolean;
 }

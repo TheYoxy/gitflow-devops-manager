@@ -30,13 +30,26 @@ yargs.command<Arguments>('release <base> <target>', 'Create a new release', (arg
   argv.positional('base', {
     describe: 'Base branch used to create a release',
     require: true,
+    type: 'string',
   }).positional('target', {
     describe: 'Target branch used to create a release',
     require: true,
+    type: 'string',
   }).option('remote', {
     alias: 'r',
     describe: 'Remote repository to use',
     default: 'origin',
+    type: 'string',
+  }).option('title', {
+    alias: 't',
+    describe: 'Generate title in the message body',
+    default: false,
+    type: 'boolean',
+  }).option('print', {
+    alias: 'p',
+    describe: 'Print the generated message',
+    default: false,
+    type: 'boolean',
   });
 }, async (args: Arguments): Promise<void> => {
   if (!shell.which('git')) {
@@ -56,7 +69,7 @@ yargs.command<Arguments>('release <base> <target>', 'Create a new release', (arg
   const remote: string = args.remote;
   const path: string = args.path;
 
-  const generateTitle = false;
+  const generateTitle = args.title;
 
   const repo: Repository = await Repository.create(path, username, password, remote);
 
@@ -200,7 +213,7 @@ yargs.command<Arguments>('release <base> <target>', 'Create a new release', (arg
         },
       }, {
         title: 'Create message',
-        task: async (ctx: Context): Promise<void> => {
+        task: async (ctx: Context, task): Promise<void> => {
 
           const types: WorkItemType[] = await workItemTracingApi.getWorkItemTypes(project);
           const d = Object.fromEntries(types.map<Type>((value): { name: string; items: WorkItem[] } => ({
@@ -239,6 +252,9 @@ yargs.command<Arguments>('release <base> <target>', 'Create a new release', (arg
           Object.getOwnPropertyNames(d).filter((value): boolean => !order.includes(value)).forEach(formatText);
 
           ctx.message = msg;
+          if (args.print) {
+            task.output = ctx.message;
+          }
         },
       }, {
         title: 'Create title',
@@ -276,7 +292,11 @@ yargs.command<Arguments>('release <base> <target>', 'Create a new release', (arg
           pullRequest = await gitApi.createPullRequest(pullRequest, repo[0].id!);
           logging.info('Pull request created', {pullRequest});
         },
-        skip: (): 'Not in production' => 'Not in production',
+        skip: () => {
+          if (args.print) {
+            return 'Print only message';
+          }
+        },
       }]),
   }]).run();
 }).demandCommand()

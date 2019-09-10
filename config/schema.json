@@ -5,8 +5,7 @@
   "type": "object",
   "title": "The Root Schema",
   "required": [
-    "$schema",
-    "Credentials"
+    "$schema"
   ],
   "properties": {
     "$schema": {
@@ -23,6 +22,7 @@
       "$id": "#/properties/Credentials",
       "type": "object",
       "title": "The Credentials Schema",
+      "default": {},
       "required": [
         "Username",
         "Token"
@@ -47,6 +47,38 @@
             ""
           ],
           "pattern": "^(.*)$"
+        }
+      }
+    },
+    "AzureDevops": {
+      "$id": "#/properties/AzureDevops",
+      "type": "object",
+      "title": "All details regarding the used repository",
+      "default": {},
+      "required": [
+        "Organization",
+        "Project"
+      ],
+      "properties": {
+        "Organization": {
+          "$id": "#/properties/AzureDevops/properties/Organization",
+          "type": "string",
+          "title": "Name of the organization",
+          "default": "",
+          "examples": [
+            "TheYoxy"
+          ],
+          "pattern": "^(\\S+)$"
+        },
+        "Project": {
+          "$id": "#/properties/AzureDevops/properties/Project",
+          "type": "string",
+          "title": "Name of the project to use",
+          "default": "",
+          "examples": [
+            "TheYoxy"
+          ],
+          "pattern": "^(\\S+)$"
         }
       }
     }

@@ -50,9 +50,8 @@ yargs.command<Arguments>('release <base> <target>', 'Create a new release', (arg
 
   const username: string = config.get<string>('Credentials.Username');
   const password: string = config.get<string>('Credentials.Token');
-
-  const organization = 'AGBehome';
-  const project = 'Behome';
+  const organization = config.get<string>('AzureDevops.Organization');
+  const project = config.get<string>('AzureDevops.Project');
 
   const remote: string = args.remote;
   const path: string = args.path;

@@ -46,7 +46,7 @@ yargs.command<Arguments>('release <base> <target>', 'Create a new release', (arg
     default: false,
     type: 'boolean',
   }).option('print', {
-    alias: 'p',
+    alias: 'd',
     describe: 'Print the generated message',
     default: false,
     type: 'boolean',
@@ -216,13 +216,14 @@ yargs.command<Arguments>('release <base> <target>', 'Create a new release', (arg
         task: async (ctx: Context, task): Promise<void> => {
 
           const types: WorkItemType[] = await workItemTracingApi.getWorkItemTypes(project);
-          const d = Object.fromEntries(types.map<Type>((value): { name: string; items: WorkItem[] } => ({
-            name: value.name!,
-            items: ctx.workItems.filter(
-              (wi: WorkItem): undefined | boolean => wi && wi.fields && wi.fields['System.WorkItemType'] === value.name),
-          }))
-                                         .filter((value: Type): boolean => value.items.length > 0)
-                                         .map((value: Type): Array<string | WorkItem[]> => [value.name, value.items]));
+          const d = Object.fromEntries(
+            types.map<Type>((value): { name: string; items: WorkItem[] } => ({
+              name: value.name!,
+              items: ctx.workItems.filter(
+                (wi: WorkItem): undefined | boolean => wi && wi.fields && wi.fields['System.WorkItemType'] === value.name),
+            }))
+              .filter((value: Type): boolean => value.items.length > 0)
+              .map((value: Type): Array<string | WorkItem[]> => [value.name, value.items]));
 
           Object.getOwnPropertyNames(d).forEach((value): winston.Logger => logging.info(`${value} ${d[value].length}`));
           //Todo make this configurable

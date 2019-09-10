@@ -138,6 +138,13 @@ describe('Repository', () => {
         return expect(repo.compareBranch(oldBranch, equalOldBranch)).resolves.toBe(BranchState.Equals);
       });
     });
+
+    describe('.syncBranch', () => {
+      it('should sync branch master', () => {
+        return expect(repo.syncBranch('master')).resolves.toBeUndefined();
+      });
+    });
+
   });
 
   it('should build', () => {

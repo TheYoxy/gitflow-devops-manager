@@ -50,6 +50,7 @@
     "babel-jest": "^24.9.0",
     "babel-preset-minify": "^0.5.1",
     "jest": "^24.9.0",
+    "jest-sonar-reporter": "^2.0.0",
     "source-map-loader": "^0.2.4",
     "ts-jest": "^24.0.2",
     "ts-loader": "^6.0.4",
@@ -77,5 +78,10 @@
   },
   "bin": {
     "gdm": "dist/main.js"
+  },
+  "jestSonar": {
+    "reportPath": "coverage",
+    "reportFile": "test-reporter.xml",
+    "indent": 4
   }
 }

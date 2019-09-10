@@ -1,5 +1,5 @@
 import fs from 'fs';
-import Git, {Branch, Commit, FetchOptions, Merge, Reference, Remote, Reset} from 'nodegit';
+import Git, {Commit, FetchOptions, Merge, Reference, Remote, Reset} from 'nodegit';
 import {logging} from './logging';
 
 export class Repository {
@@ -79,7 +79,12 @@ export class Repository {
     try {
       const from = `refs/remotes/${this._remoteName}/${branchName}`;
       if (!await this.isLocal(branchName)) {
-        logging.debug('Branch doesn\'t exist locally', {branchName});
+        logging.debug('Branch doesn\'t exist locally', {
+          label: 'pull',
+          branchName,
+          remoteName: this._remoteName,
+          remote: this._remote,
+        });
         await this.createBranchFromRemote(branchName, branchName);
       } else {
         logging.debug('Branch pulled by merging', {
@@ -120,7 +125,7 @@ export class Repository {
     return this._repo.checkoutBranch(branchName);
   }
 
-  async checkBranch(branchName: string): Promise<Branch | null> {
+  async checkBranch(branchName: string): Promise<Reference | null> {
     const logObj = {label: 'checkbranch', branchName, remoteName: this._remoteName};
     logging.debug(`Checking if branch ${branchName} exist in local`, logObj);
     if (await this.isLocal(branchName)) {
@@ -131,6 +136,7 @@ export class Repository {
         logging.debug('Syncing branches');
         //todo sync method
         await this.syncBranch(branchName);
+        return this.getBranch(branchName);
       } else {
         logging.warn(`Branch ${branchName} doesn\'t exist in the remote ${this._remoteName}`, logObj);
         logging.debug(`Pushing branch ${branchName} in the remote ${this._remoteName}`, logObj);
@@ -160,7 +166,6 @@ export class Repository {
         throw new Error(`Unable to find branch ${branchName} in the repository`);
       }
     }
-    return null;
   }
 
   async compareBranch(sourceBranchName: string, targetBranchName: string) {
